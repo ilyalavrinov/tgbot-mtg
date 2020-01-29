@@ -118,7 +118,7 @@ func (h *findHandler) HandleOne(msg tgbotapi.Message) {
 	if msg.IsCommand() {
 		cardname = msg.CommandArguments()
 	} else {
-		cardname = re.FindString(msg.Text)
+		cardname = re.FindStringSubmatch(msg.Text)[1]
 	}
 	log.WithFields(log.Fields{"cardname": cardname, "msg": msg.Text}).Info("message triggered")
 	if c, found := h.cardsByName[cardname]; found {

@@ -5,8 +5,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"./bot"
 	"github.com/admirallarimda/tgbotbase"
+	"github.com/ilyalavrinov/tgbot-mtg/bot"
 	"gopkg.in/gcfg.v1"
 )
 
