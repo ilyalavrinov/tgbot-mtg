@@ -109,9 +109,17 @@ func (h *findHandler) Init(outMsgCh chan<- tgbotapi.Chattable, srvCh chan<- tgbo
 			panic(err)
 		}
 		h.cardsByID[c.ID] = c
-		h.cardsByName[strings.ToLower(c.LocalName)] = c
-		if c.Lang == "en" {
-			h.cardsByName[strings.ToLower(c.Name)] = c
+		names := []string{c.Name, c.LocalName}
+		for _, n := range names {
+			n := strings.ToLower(n)
+			_, found := h.cardsByName[n]
+			if found {
+				if c.Lang == "en" {
+					h.cardsByName[n] = c
+				}
+			} else {
+				h.cardsByName[n] = c
+			}
 		}
 	}
 	_, err = dec.Token()
