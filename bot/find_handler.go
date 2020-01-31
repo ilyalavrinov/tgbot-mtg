@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -69,14 +68,6 @@ func loadDump(dumpPath string) error {
 	return nil
 }
 
-func (h *findHandler) loadCards(cards []Card) {
-	for _, c := range cards {
-		h.cardsByID[c.ID] = c
-		h.cardsByName[c.Name] = c
-		h.cardsByName[c.LocalName] = c
-	}
-}
-
 type Card struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -101,13 +92,27 @@ func (h *findHandler) Init(outMsgCh chan<- tgbotapi.Chattable, srvCh chan<- tgbo
 	if err != nil {
 		panic(err)
 	}
-	data, _ := ioutil.ReadAll(f)
-	var cards []Card
-	log.WithFields(log.Fields{"dumpPath": dumpPath, "size": len(data)}).Info("unmarshalling dump")
-	json.Unmarshal(data, &cards)
-	log.WithFields(log.Fields{"cards": len(cards)}).Info("unmarshalling done")
-
-	h.loadCards(cards)
+	log.WithFields(log.Fields{"dumpPath": dumpPath}).Info("decoding dump")
+	dec := json.NewDecoder(f)
+	_, err = dec.Token()
+	if err != nil {
+		panic(err)
+	}
+	for dec.More() {
+		var c Card
+		err := dec.Decode(&c)
+		if err != nil {
+			panic(err)
+		}
+		h.cardsByID[c.ID] = c
+		h.cardsByName[c.Name] = c
+		h.cardsByName[c.LocalName] = c
+	}
+	_, err = dec.Token()
+	if err != nil {
+		panic(err)
+	}
+	log.WithFields(log.Fields{"cardsByID": len(h.cardsByID), "cardsByName": len(h.cardsByName)}).Info("decoding done")
 
 	h.OutMsgCh = outMsgCh
 	return tgbotbase.NewHandlerTrigger(re, []string{"find"})
