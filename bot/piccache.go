@@ -27,7 +27,7 @@ func NewPicCache(baseDir string) *PicCache {
 func (c *PicCache) Get(id string) (string, error) {
 	fpath := path.Join(c.dir, string(id))
 	_, err := os.Stat(fpath)
-	if err == os.ErrNotExist {
+	if os.IsNotExist(err) {
 		return c.load(id)
 	}
 	return fpath, nil
