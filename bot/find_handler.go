@@ -69,11 +69,15 @@ func loadDump(dumpPath string) error {
 	return nil
 }
 
+type Images struct {
+	Normal string `json:"normal"`
+}
 type Card struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	LocalName string `json:"printed_name"`
 	Lang      string `json:"lang"`
+	ImageURIs Images `json:"image_uris"`
 }
 
 var re = regexp.MustCompile("\\[\\[(.*)\\]\\]")
@@ -105,8 +109,10 @@ func (h *findHandler) Init(outMsgCh chan<- tgbotapi.Chattable, srvCh chan<- tgbo
 			panic(err)
 		}
 		h.cardsByID[c.ID] = c
-		h.cardsByName[strings.ToLower(c.Name)] = c
 		h.cardsByName[strings.ToLower(c.LocalName)] = c
+		if c.Lang == "en" {
+			h.cardsByName[strings.ToLower(c.Name)] = c
+		}
 	}
 	_, err = dec.Token()
 	if err != nil {
@@ -127,7 +133,7 @@ func (h *findHandler) HandleOne(msg tgbotapi.Message) {
 	}
 	log.WithFields(log.Fields{"cardname": cardname, "msg": msg.Text}).Info("message triggered")
 	if c, found := h.cardsByName[strings.ToLower(cardname)]; found {
-		picPath, err := h.cache.Get(c.ID)
+		picPath, err := h.cache.Get(c.ID, c.ImageURIs.Normal)
 		if err != nil {
 			log.WithFields(log.Fields{"id": c.ID, "err": err, "picPath": picPath}).Error("unable to get a picture from cache")
 		}

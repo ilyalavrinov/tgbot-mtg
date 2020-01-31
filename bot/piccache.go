@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -24,18 +23,18 @@ func NewPicCache(baseDir string) *PicCache {
 	}
 }
 
-func (c *PicCache) Get(id string) (string, error) {
+func (c *PicCache) Get(id, url string) (string, error) {
 	fpath := path.Join(c.dir, string(id))
 	_, err := os.Stat(fpath)
 	if os.IsNotExist(err) {
-		return c.load(id)
+		return c.load(id, url)
 	}
 	return fpath, nil
 }
 
-func (c *PicCache) load(id string) (string, error) {
-	log.WithFields(log.Fields{"id": id}).Info("loading missing picture")
-	resp, err := http.Get(picURL(id))
+func (c *PicCache) load(id, url string) (string, error) {
+	log.WithFields(log.Fields{"id": id, "url": url}).Info("loading missing picture")
+	resp, err := http.Get(url)
 	if err != nil {
 		return "", err
 	}
@@ -55,8 +54,4 @@ func (c *PicCache) load(id string) (string, error) {
 	}
 
 	return fpath, nil
-}
-
-func picURL(id string) string {
-	return fmt.Sprintf("https://img.scryfall.com/cards/border_crop/front/1/2/%s.jpg", id)
 }
