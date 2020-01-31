@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strings"
 
 	"github.com/admirallarimda/tgbotbase"
 	log "github.com/sirupsen/logrus"
@@ -69,11 +70,10 @@ func loadDump(dumpPath string) error {
 }
 
 type Card struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	LocalName   string `json:"printed_name"`
-	Lang        string `json:"lang"`
-	ScryfallURL string `json:"scryfall_uri"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	LocalName string `json:"printed_name"`
+	Lang      string `json:"lang"`
 }
 
 var re = regexp.MustCompile("\\[\\[(.*)\\]\\]")
@@ -105,8 +105,8 @@ func (h *findHandler) Init(outMsgCh chan<- tgbotapi.Chattable, srvCh chan<- tgbo
 			panic(err)
 		}
 		h.cardsByID[c.ID] = c
-		h.cardsByName[c.Name] = c
-		h.cardsByName[c.LocalName] = c
+		h.cardsByName[strings.ToLower(c.Name)] = c
+		h.cardsByName[strings.ToLower(c.LocalName)] = c
 	}
 	_, err = dec.Token()
 	if err != nil {
@@ -126,10 +126,17 @@ func (h *findHandler) HandleOne(msg tgbotapi.Message) {
 		cardname = re.FindStringSubmatch(msg.Text)[1]
 	}
 	log.WithFields(log.Fields{"cardname": cardname, "msg": msg.Text}).Info("message triggered")
-	if c, found := h.cardsByName[cardname]; found {
-		h.OutMsgCh <- tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("card for name %q has been found. URL: %s", cardname, c.ScryfallURL))
+	if c, found := h.cardsByName[strings.ToLower(cardname)]; found {
+		picPath, err := h.cache.Get(c.ID)
+		if err != nil {
+			log.WithFields(log.Fields{"id": c.ID, "err": err, "picPath": picPath}).Error("unable to get a picture from cache")
+		}
+		picMsg := tgbotapi.NewPhotoUpload(int64(msg.Chat.ID), picPath)
+		picMsg.Caption = c.LocalName
+
+		h.OutMsgCh <- picMsg
 	} else {
-		h.OutMsgCh <- tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("could not find a card for name %q", cardname))
+		h.OutMsgCh <- tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("There's no card named %q", cardname))
 	}
 }
 
