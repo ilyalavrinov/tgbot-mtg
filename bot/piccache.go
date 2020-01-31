@@ -15,6 +15,10 @@ type PicCache struct {
 }
 
 func NewPicCache(baseDir string) *PicCache {
+	if err := os.MkdirAll(baseDir, os.ModePerm); err != nil {
+		panic(err)
+	}
+
 	return &PicCache{
 		dir: baseDir,
 	}
