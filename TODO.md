@@ -1,7 +1,8 @@
 * ~~Load big dump in chunks~~
 * ~~Support different languages (ru and en for a start)~~
 * ~~Send pictures as a response~~
-* Handle all possible variants of queries (see slack/discord bots on Scryfall)
+* ~~Handle all possible variants of queries (see slack/discord bots on Scryfall)~~
+* Handle multiple requests in same message
 * Handle partial names
 * EDHREC daily commander
 * New spoilers
