@@ -108,6 +108,9 @@ func (h *findHandler) Init(outMsgCh chan<- tgbotapi.Chattable, srvCh chan<- tgbo
 		if err != nil {
 			panic(err)
 		}
+		if c.LocalName == "" {
+			c.LocalName = c.Name
+		}
 		h.cardsByID[c.ID] = c
 		names := []string{c.Name, c.LocalName}
 		for _, n := range names {
