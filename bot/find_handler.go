@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -73,11 +74,13 @@ type Images struct {
 	Normal string `json:"normal"`
 }
 type Card struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	LocalName string `json:"printed_name"`
-	Lang      string `json:"lang"`
-	ImageURIs Images `json:"image_uris"`
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	LocalName  string `json:"printed_name"`
+	Lang       string `json:"lang"`
+	ImageURIs  Images `json:"image_uris"`
+	URI        string `json:"uri"`
+	RulingsURI string `json:"rulings_uri"`
 }
 
 var re = regexp.MustCompile("\\[\\[(.*)\\]\\]")
@@ -136,25 +139,119 @@ func (h *findHandler) Init(outMsgCh chan<- tgbotapi.Chattable, srvCh chan<- tgbo
 }
 
 func (h *findHandler) HandleOne(msg tgbotapi.Message) {
-	cardname := ""
+	req := ""
 	if msg.IsCommand() {
-		cardname = msg.CommandArguments()
+		req = msg.CommandArguments()
 	} else {
-		cardname = re.FindStringSubmatch(msg.Text)[1]
+		req = re.FindStringSubmatch(msg.Text)[1]
 	}
-	log.WithFields(log.Fields{"cardname": cardname, "msg": msg.Text}).Info("message triggered")
-	if c, found := h.cardsByName[strings.ToLower(strings.TrimSpace(cardname))]; found {
-		picPath, err := h.cache.Get(c.ID, c.ImageURIs.Normal)
-		if err != nil {
-			log.WithFields(log.Fields{"id": c.ID, "err": err, "picPath": picPath}).Error("unable to get a picture from cache")
-		}
-		picMsg := tgbotapi.NewPhotoUpload(int64(msg.Chat.ID), picPath)
-		picMsg.Caption = c.LocalName
+	log.WithFields(log.Fields{"req": req, "msg": msg.Text}).Info("message triggered")
+	req = strings.Trim(req, " \n\t[]")
+	cardname := strings.ToLower(strings.Trim(req, "$#"))
+	if req == "" || cardname == "" {
+		return
+	}
+	c, found := h.cardsByName[cardname]
+	if !found {
+		reply := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("There's no card named %q", cardname))
+		reply.ReplyToMessageID = msg.MessageID
+		h.OutMsgCh <- reply
+		return
+	}
+	switch string(req[0]) {
+	case "$":
+		h.handlePrice(c, msg)
+	case "#":
+		h.handleRulings(c, msg)
+	default:
+		h.handleCard(c, msg)
+	}
+}
 
-		h.OutMsgCh <- picMsg
-	} else {
-		h.OutMsgCh <- tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("There's no card named %q", cardname))
+func (h *findHandler) handleCard(c Card, msg tgbotapi.Message) {
+	picPath, err := h.cache.Get(c.ID, c.ImageURIs.Normal)
+	if err != nil {
+		log.WithFields(log.Fields{"id": c.ID, "err": err, "picPath": picPath}).Error("unable to get a picture from cache")
 	}
+	picMsg := tgbotapi.NewPhotoUpload(int64(msg.Chat.ID), picPath)
+	picMsg.Caption = c.LocalName
+	picMsg.ReplyToMessageID = msg.MessageID
+
+	h.OutMsgCh <- picMsg
+}
+
+type cardFull struct {
+	Prices struct {
+		USD     string
+		USDFoil string `json:"usd_foil"`
+		EUR     string
+	}
+}
+
+func (h *findHandler) handlePrice(c Card, msg tgbotapi.Message) {
+	resp, err := http.Get(c.URI)
+	if err != nil {
+		log.WithFields(log.Fields{"cardID": c.ID, "URI": c.URI, "err": err}).Error("cannot load info from card URI")
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.WithFields(log.Fields{"cardID": c.ID, "URI": c.URI, "err": err}).Error("cannot read API response")
+		return
+	}
+
+	var cFull cardFull
+	if err = json.Unmarshal(body, &cFull); err != nil {
+		log.WithFields(log.Fields{"cardID": c.ID, "URI": c.URI, "err": err}).Error("cannot unmarshal full card info")
+		return
+	}
+
+	reply := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("Prices for %q:\nUSD: %s\nUSD Foil: %s\nEUR: %s", c.LocalName, cFull.Prices.USD, cFull.Prices.USDFoil, cFull.Prices.EUR))
+	reply.ReplyToMessageID = msg.MessageID
+	h.OutMsgCh <- reply
+}
+
+type ruling struct {
+	PublishedAt string `json:"published_at"`
+	Comment     string
+}
+type rulings struct {
+	Data []ruling
+}
+
+func (h *findHandler) handleRulings(c Card, msg tgbotapi.Message) {
+	resp, err := http.Get(c.RulingsURI)
+	if err != nil {
+		log.WithFields(log.Fields{"cardID": c.ID, "URI": c.URI, "err": err}).Error("cannot load rulings")
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.WithFields(log.Fields{"cardID": c.ID, "URI": c.URI, "err": err}).Error("cannot read rulings")
+		return
+	}
+
+	var rules rulings
+	if err = json.Unmarshal(body, &rules); err != nil {
+		log.WithFields(log.Fields{"cardID": c.ID, "URI": c.URI, "err": err}).Error("cannot unmarshal rulings")
+		return
+	}
+
+	replyTxt := ""
+	if len(rules.Data) == 0 {
+		replyTxt = fmt.Sprintf("Card %q does not have specific rulings", c.LocalName)
+	} else {
+		for _, d := range rules.Data {
+			replyTxt = fmt.Sprintf("%s%s: %s\n", replyTxt, d.PublishedAt, d.Comment)
+		}
+	}
+	reply := tgbotapi.NewMessage(msg.Chat.ID, replyTxt)
+	reply.ReplyToMessageID = msg.MessageID
+	h.OutMsgCh <- reply
 }
 
 func (h *findHandler) Name() string {
