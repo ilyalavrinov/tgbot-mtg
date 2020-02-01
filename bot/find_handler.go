@@ -140,7 +140,7 @@ func (h *findHandler) HandleOne(msg tgbotapi.Message) {
 		cardname = re.FindStringSubmatch(msg.Text)[1]
 	}
 	log.WithFields(log.Fields{"cardname": cardname, "msg": msg.Text}).Info("message triggered")
-	if c, found := h.cardsByName[strings.ToLower(cardname)]; found {
+	if c, found := h.cardsByName[strings.ToLower(strings.TrimSpace(cardname))]; found {
 		picPath, err := h.cache.Get(c.ID, c.ImageURIs.Normal)
 		if err != nil {
 			log.WithFields(log.Fields{"id": c.ID, "err": err, "picPath": picPath}).Error("unable to get a picture from cache")
