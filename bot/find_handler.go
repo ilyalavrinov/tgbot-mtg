@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ilyalavrinov/tgbot-mtg/price"
+
 	"github.com/admirallarimda/tgbotbase"
 	log "github.com/sirupsen/logrus"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
@@ -74,13 +76,14 @@ type Images struct {
 	Normal string `json:"normal"`
 }
 type Card struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	LocalName  string `json:"printed_name"`
-	Lang       string `json:"lang"`
-	ImageURIs  Images `json:"image_uris"`
-	URI        string `json:"uri"`
-	RulingsURI string `json:"rulings_uri"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	LocalName   string `json:"printed_name"`
+	Lang        string `json:"lang"`
+	ImageURIs   Images `json:"image_uris"`
+	URI         string `json:"uri"`
+	RulingsURI  string `json:"rulings_uri"`
+	ScryfallURI string `json:"scryfall_uri"`
 }
 
 var re = regexp.MustCompile("\\[\\[(.*)\\]\\]")
@@ -172,43 +175,66 @@ func (h *findHandler) handleCard(c Card, msg tgbotapi.Message) {
 	picPath, err := h.cache.Get(c.ID, c.ImageURIs.Normal)
 	if err != nil {
 		log.WithFields(log.Fields{"id": c.ID, "err": err, "picPath": picPath}).Error("unable to get a picture from cache")
+		return
 	}
 	picMsg := tgbotapi.NewPhotoUpload(int64(msg.Chat.ID), picPath)
-	picMsg.Caption = c.LocalName
+	picMsg.ParseMode = "MarkdownV2"
+	caption := fmt.Sprintf("[%s](%s)", c.LocalName, c.ScryfallURI)
+	prices, err := getPrices(c)
+	if err == nil {
+		usdPriceEscaped := strings.ReplaceAll(prices.PricesScryfall.USD, ".", "\\.")
+		caption = fmt.Sprintf("%s\n%s$\n%d₽ on [mtgsale](%s)", caption, usdPriceEscaped, prices.PriceMtgSale, price.MtgSaleURL(c.LocalName))
+	}
+	picMsg.Caption = caption
 	picMsg.ReplyToMessageID = msg.MessageID
 
 	h.OutMsgCh <- picMsg
 }
 
-type cardFull struct {
-	Prices struct {
+type cardPrices struct {
+	PricesScryfall struct {
 		USD     string
 		USDFoil string `json:"usd_foil"`
 		EUR     string
-	}
+	} `json:"prices"`
+	PriceMtgSale int
 }
 
-func (h *findHandler) handlePrice(c Card, msg tgbotapi.Message) {
+func getPrices(c Card) (cardPrices, error) {
+	var prices cardPrices
+
+	// scryfall
 	resp, err := http.Get(c.URI)
 	if err != nil {
 		log.WithFields(log.Fields{"cardID": c.ID, "URI": c.URI, "err": err}).Error("cannot load info from card URI")
-		return
+		return prices, err
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.WithFields(log.Fields{"cardID": c.ID, "URI": c.URI, "err": err}).Error("cannot read API response")
-		return
+		return prices, err
 	}
 
-	var cFull cardFull
-	if err = json.Unmarshal(body, &cFull); err != nil {
+	if err = json.Unmarshal(body, &prices); err != nil {
 		log.WithFields(log.Fields{"cardID": c.ID, "URI": c.URI, "err": err}).Error("cannot unmarshal full card info")
+		return prices, err
+	}
+
+	// mtgsale
+	prices.PriceMtgSale = price.MtgSale(c.LocalName)
+
+	return prices, nil
+}
+
+func (h *findHandler) handlePrice(c Card, msg tgbotapi.Message) {
+	prices, err := getPrices(c)
+	if err != nil {
 		return
 	}
 
-	reply := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("Prices for %q:\nUSD: %s\nUSD Foil: %s\nEUR: %s", c.LocalName, cFull.Prices.USD, cFull.Prices.USDFoil, cFull.Prices.EUR))
+	reply := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("Prices for %q:\nUSD: %s\nUSD Foil: %s\nEUR: %s", c.LocalName, prices.PricesScryfall.USD, prices.PricesScryfall.USDFoil, prices.PricesScryfall.EUR))
 	reply.ReplyToMessageID = msg.MessageID
 	h.OutMsgCh <- reply
 }

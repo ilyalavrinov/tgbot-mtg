@@ -3,11 +3,11 @@ package main
 import (
 	"flag"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/admirallarimda/tgbotbase"
 	"github.com/ilyalavrinov/tgbot-mtg/bot"
 	"gopkg.in/gcfg.v1"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var argCfg = flag.String("cfg", "./mtgbot.cfg", "path to config")
@@ -25,6 +25,7 @@ type config struct {
 }
 
 func main() {
+	//	log.SetLevel(log.DebugLevel)
 	flag.Parse()
 
 	var cfg config
