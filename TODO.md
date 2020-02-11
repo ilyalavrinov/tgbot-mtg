@@ -10,3 +10,7 @@
 * Statistics for raw card pics added by users to channel
 * Matchup stats
 * piccache thread-safe
+
+
+Bugs:
+* Brazen borrower could not be found - name for double card seems to be smth like "Brazen Borrower // Petty Theft"
