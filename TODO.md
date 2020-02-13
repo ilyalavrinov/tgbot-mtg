@@ -14,3 +14,4 @@
 
 Bugs:
 * Brazen borrower could not be found - name for double card seems to be smth like "Brazen Borrower // Petty Theft"
+* when no card on mtgsale, price is 32.xxx
