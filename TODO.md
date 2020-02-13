@@ -13,4 +13,4 @@
 
 
 Bugs:
-* when no card on mtgsale, price is 32.xxx
+* when no card on mtgsale, price is 32.xxx (doesn't work with Brazen Borrower as a request. But works for Give)
