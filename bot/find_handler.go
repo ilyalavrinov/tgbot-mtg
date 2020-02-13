@@ -86,7 +86,7 @@ type Card struct {
 	ScryfallURI string `json:"scryfall_uri"`
 }
 
-var re = regexp.MustCompile("\\[\\[(.*)\\]\\]")
+var re = regexp.MustCompile("(?U)\\[{2}(.*)\\]{2}")
 
 func (h *findHandler) Init(outMsgCh chan<- tgbotapi.Chattable, srvCh chan<- tgbotbase.ServiceMsg) tgbotbase.HandlerTrigger {
 	dumpPath := path.Join(h.cardsDir, dumpFilename)
@@ -142,31 +142,63 @@ func (h *findHandler) Init(outMsgCh chan<- tgbotapi.Chattable, srvCh chan<- tgbo
 }
 
 func (h *findHandler) HandleOne(msg tgbotapi.Message) {
-	req := ""
+	reqs := []string{}
 	if msg.IsCommand() {
-		req = msg.CommandArguments()
+		reqs = append(reqs, msg.CommandArguments())
 	} else {
-		req = re.FindStringSubmatch(msg.Text)[1]
+		matches := re.FindAllStringSubmatch(msg.Text, -1)
+		for _, m := range matches {
+			reqs = append(reqs, m[1])
+		}
 	}
-	log.WithFields(log.Fields{"req": req, "msg": msg.Text}).Info("message triggered")
-	req = strings.Trim(req, " \n\t[]")
-	cardname := strings.ToLower(strings.Trim(req, "$#"))
-	if req == "" || cardname == "" {
+	log.WithFields(log.Fields{"req": reqs, "msg": msg.Text}).Info("message triggered")
+
+	cardsNotFound := []string{}
+	cardsToShow := make(map[string]Card, 0)
+	cardsRulings := make(map[string]Card, 0)
+	for _, req := range reqs {
+		req = strings.Trim(req, " \n\t[]")
+		cardname := strings.ToLower(strings.Trim(req, "$#"))
+		if req == "" || cardname == "" {
+			continue
+		}
+		card, found := h.cardsByName[cardname]
+		if !found {
+			cardsNotFound = append(cardsNotFound, cardname)
+			continue
+		}
+		switch string(req[0]) {
+		case "$":
+			// price is handled at a card req
+			//h.handlePrice(card, msg)
+		case "#":
+			cardsRulings[cardname] = card
+		default:
+			cardsToShow[cardname] = card
+		}
+	}
+
+	h.handleCards(cardsToShow, msg)
+	h.handleRulings(cardsRulings, msg)
+	h.handleNotFound(cardsNotFound, msg)
+}
+
+func (h *findHandler) handleNotFound(notFound []string, msg tgbotapi.Message) {
+	if len(notFound) == 0 {
 		return
 	}
-	c, found := h.cardsByName[cardname]
-	if !found {
-		reply := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("There's no card named %q", cardname))
-		reply.ReplyToMessageID = msg.MessageID
-		h.OutMsgCh <- reply
-		return
+
+	m := fmt.Sprintf("I could not recognize the following cards:")
+	for _, name := range notFound {
+		m = fmt.Sprintf("%s\n%s", m, name)
 	}
-	switch string(req[0]) {
-	case "$":
-		h.handlePrice(c, msg)
-	case "#":
-		h.handleRulings(c, msg)
-	default:
+	reply := tgbotapi.NewMessage(msg.Chat.ID, m)
+	reply.ReplyToMessageID = msg.MessageID
+	h.OutMsgCh <- reply
+}
+
+func (h *findHandler) handleCards(cards map[string]Card, msg tgbotapi.Message) {
+	for _, c := range cards {
 		h.handleCard(c, msg)
 	}
 }
@@ -247,7 +279,13 @@ type rulings struct {
 	Data []ruling
 }
 
-func (h *findHandler) handleRulings(c Card, msg tgbotapi.Message) {
+func (h *findHandler) handleRulings(cards map[string]Card, msg tgbotapi.Message) {
+	for _, c := range cards {
+		h.handleRulingsSingle(c, msg)
+	}
+}
+
+func (h *findHandler) handleRulingsSingle(c Card, msg tgbotapi.Message) {
 	resp, err := http.Get(c.RulingsURI)
 	if err != nil {
 		log.WithFields(log.Fields{"cardID": c.ID, "URI": c.URI, "err": err}).Error("cannot load rulings")
