@@ -119,6 +119,11 @@ func (h *findHandler) Init(outMsgCh chan<- tgbotapi.Chattable, srvCh chan<- tgbo
 		}
 		h.cardsByID[c.ID] = c
 		names := []string{c.Name, c.LocalName}
+		if strings.Contains(c.Name, "//") {
+			names = []string{}
+			names = append(names, strings.Split(c.Name, " // ")...)
+			names = append(names, strings.Split(c.LocalName, " // ")...)
+		}
 		for _, n := range names {
 			n := strings.ToLower(n)
 			_, found := h.cardsByName[n]
