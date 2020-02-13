@@ -15,3 +15,4 @@
 Bugs:
 * Brazen borrower could not be found - name for double card seems to be smth like "Brazen Borrower // Petty Theft"
 * when no card on mtgsale, price is 32.xxx
+* fields.msg="[[Erebos, Bleak-Hearted]]" Could not sent reply ) ParseMode:MarkdownV2} due to error: Bad Request: can't parse entities: Character '-' is reserved and must be escaped with the preceding '\'
