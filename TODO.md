@@ -6,6 +6,7 @@
 * Handle partial names
 * EDHREC daily commander
 * mtgsale daily discounts
+* buttons which allow adding cards to a list of favourites
 * New spoilers
 * Statistics for requests (who, what, when, etc.)
 * Statistics for raw card pics added by users to channel
