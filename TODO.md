@@ -12,6 +12,8 @@
 * Statistics for raw card pics added by users to channel
 * Matchup stats
 * piccache thread-safe
+* autumnmagic.com price search
+* mtgtrade price search
 
 
 Bugs:
