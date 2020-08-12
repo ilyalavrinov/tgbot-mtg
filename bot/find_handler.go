@@ -11,9 +11,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ilyalavrinov/tgbot-mtg/price"
-
 	"github.com/admirallarimda/tgbotbase"
+	"github.com/ilyalavrinov/mtgbulkbuy/pkg/mtgbulk"
 	log "github.com/sirupsen/logrus"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
@@ -226,7 +225,12 @@ func (h *findHandler) handleCard(c Card, msg tgbotapi.Message) {
 	prices, err := getPrices(c)
 	if err == nil {
 		usdPriceEscaped := strings.ReplaceAll(prices.PricesScryfall.USD, ".", "\\.")
-		caption = fmt.Sprintf("%s\n%s$\n%d₽ on [mtgsale](%s)", caption, usdPriceEscaped, prices.PriceMtgSale, price.MtgSaleURL(c.LocalName))
+		if usdPriceEscaped != "" {
+			caption = fmt.Sprintf("%s\n%s$", caption, usdPriceEscaped)
+		}
+		if prices.MinRU.Price != 0 {
+			caption = fmt.Sprintf("%s\nmin %d₽ at [%s](%s)", caption, prices.MinRU.Price, prices.MinRU.Seller, prices.MinRU.URL)
+		}
 	}
 	picMsg.Caption = caption
 	picMsg.ReplyToMessageID = msg.MessageID
@@ -240,7 +244,11 @@ type cardPrices struct {
 		USDFoil string `json:"usd_foil"`
 		EUR     string
 	} `json:"prices"`
-	PriceMtgSale int
+	MinRU struct {
+		Price  int
+		Seller string
+		URL    string
+	}
 }
 
 func getPrices(c Card) (cardPrices, error) {
@@ -265,8 +273,17 @@ func getPrices(c Card) (cardPrices, error) {
 		return prices, err
 	}
 
-	// mtgsale
-	prices.PriceMtgSale = price.MtgSale(c.LocalName)
+	req := mtgbulk.NewNamesRequest()
+	req.Cards[c.LocalName] = 1
+	res, err := mtgbulk.ProcessByNames(req)
+	if err != nil {
+		log.WithFields(log.Fields{"cardName": c.LocalName, "err": err}).Error("cannot get min card prices")
+	} else {
+		cres := res.MinPricesRule[c.LocalName][0]
+		prices.MinRU.Price = int(cres.Price)
+		prices.MinRU.Seller = cres.Trader
+		prices.MinRU.URL = cres.URL
+	}
 
 	return prices, nil
 }
