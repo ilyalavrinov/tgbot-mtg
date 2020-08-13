@@ -207,8 +207,6 @@ func (h *findHandler) handleCards(cards map[string]Card, msg tgbotapi.Message) {
 	}
 }
 
-var markdownToEscape = []string{"\\", "`", "*", "_", "{", "}", "[", "]", "(", ")", "#", "+", "-", ".", "!"}
-
 func (h *findHandler) handleCard(c Card, msg tgbotapi.Message) {
 	picPath, err := h.cache.Get(c.ID, c.ImageURIs.Normal)
 	if err != nil {
@@ -218,9 +216,7 @@ func (h *findHandler) handleCard(c Card, msg tgbotapi.Message) {
 	picMsg := tgbotapi.NewPhotoUpload(int64(msg.Chat.ID), picPath)
 	picMsg.ParseMode = "MarkdownV2"
 	name := c.LocalName
-	for _, e := range markdownToEscape {
-		name = strings.ReplaceAll(name, e, "\\"+e)
-	}
+	name = escapeMarkdown(name)
 	caption := fmt.Sprintf("[%s](%s)", name, c.ScryfallURI)
 	prices, err := getPrices(c)
 	if err == nil {

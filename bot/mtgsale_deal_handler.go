@@ -2,9 +2,6 @@ package bot
 
 import (
 	"fmt"
-	"io"
-	"io/ioutil"
-	"net/http"
 	"time"
 
 	"github.com/admirallarimda/tgbotbase"
@@ -70,7 +67,7 @@ func (h *mtgSaleDealHandler) Run() {
 				prevDealName = data.cardname
 				h.props.SetPropertyForUserInChat("mtgsaleDealLast", 0, 0, prevDealName)
 
-				picFName, err := loadDailyPic(data.picUrl)
+				picFName, err := loadPicToTmp(data.picUrl, "tgbotmtg-mtgsaledeal-")
 				if err != nil {
 					log.Errorf("Could not load daily deal pic, err: %s", err)
 					continue
@@ -125,26 +122,4 @@ func (job *mtgsaleDealJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
 		"priceOld": curDeal.priceOld}).Debug("scrapped mtgsale deal")
 
 	job.updates <- curDeal
-}
-
-func loadDailyPic(url string) (string, error) {
-	tmp, err := ioutil.TempFile("", "tgbotmtg-mtgsaledeal-")
-	if err != nil {
-		return "", err
-	}
-	defer tmp.Close()
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	// Write the body to file
-	_, err = io.Copy(tmp, resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	return tmp.Name(), nil
 }

@@ -26,7 +26,7 @@ type config struct {
 }
 
 func main() {
-	//	log.SetLevel(log.DebugLevel)
+	//log.SetLevel(log.DebugLevel)
 	flag.Parse()
 
 	var cfg config
@@ -48,6 +48,7 @@ func main() {
 
 	tgbot.AddHandler(tgbotbase.NewIncomingMessageDealer(bot.NewFindHandler(cfg.Cards.ScryfallDumpDir, bot.NewPicCache(cfg.Cache.Dir))))
 	tgbot.AddHandler(tgbotbase.NewBackgroundMessageDealer(bot.NewMtgsaleDealHandler(cron, props)))
+	tgbot.AddHandler(tgbotbase.NewBackgroundMessageDealer(bot.NewEdhrecCmdrDailyHandler(cron, props)))
 
 	log.Info("Starting bot")
 	tgbot.Start()
