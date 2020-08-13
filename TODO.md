@@ -4,8 +4,8 @@
 * ~~Handle all possible variants of queries (see slack/discord bots on Scryfall)~~
 * ~~Handle multiple requests in same message~~
 * Handle partial names
-* EDHREC daily commander
-* mtgsale daily discounts
+* ~~EDHREC daily commander~~
+* ~~mtgsale daily discounts~~
 * buttons which allow adding cards to a list of favourites
 * New spoilers
 * Statistics for requests (who, what, when, etc.)
@@ -13,8 +13,8 @@
 * Matchup stats
 * piccache thread-safe
 * autumnmagic.com price search
-* mtgtrade price search
+* ~~mtgtrade price search~~
 
 
 Bugs:
-* when no card on mtgsale, price is 32.xxx (doesn't work with Brazen Borrower as a request. But works for Give)
+* ~~when no card on mtgsale, price is 32.xxx (doesn't work with Brazen Borrower as a request. But works for Give)~~
