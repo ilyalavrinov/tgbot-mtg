@@ -14,6 +14,8 @@
 * piccache thread-safe
 * autumnmagic.com price search
 * ~~mtgtrade price search~~
+* daily commander - show prices
+* when showing prices - show not only min, but also avg
 
 
 Bugs:
