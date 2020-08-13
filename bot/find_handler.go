@@ -224,8 +224,8 @@ func (h *findHandler) handleCard(c Card, msg tgbotapi.Message) {
 		if usdPriceEscaped != "" {
 			caption = fmt.Sprintf("%s\n%s$", caption, usdPriceEscaped)
 		}
-		if prices.MinRU.Price != 0 {
-			caption = fmt.Sprintf("%s\nmin %d₽ at [%s](%s)", caption, prices.MinRU.Price, prices.MinRU.Seller, prices.MinRU.URL)
+		if prices.Price.Price != 0 {
+			caption = fmt.Sprintf("%s\n%s", caption, formatPrice("min", prices.Price))
 		}
 	}
 	picMsg.Caption = caption
@@ -234,17 +234,18 @@ func (h *findHandler) handleCard(c Card, msg tgbotapi.Message) {
 	h.OutMsgCh <- picMsg
 }
 
+type price struct {
+	Price  int
+	Seller string
+	URL    string
+}
 type cardPrices struct {
 	PricesScryfall struct {
 		USD     string
 		USDFoil string `json:"usd_foil"`
 		EUR     string
 	} `json:"prices"`
-	MinRU struct {
-		Price  int
-		Seller string
-		URL    string
-	}
+	Price price
 }
 
 func getPrices(c Card) (cardPrices, error) {
@@ -276,9 +277,9 @@ func getPrices(c Card) (cardPrices, error) {
 		log.WithFields(log.Fields{"cardName": c.LocalName, "err": err}).Error("cannot get min card prices")
 	} else {
 		cres := res.MinPricesRule[c.LocalName][0]
-		prices.MinRU.Price = int(cres.Price)
-		prices.MinRU.Seller = cres.Trader
-		prices.MinRU.URL = cres.URL
+		prices.Price.Price = int(cres.Price)
+		prices.Price.Seller = cres.Trader
+		prices.Price.URL = cres.URL
 	}
 
 	return prices, nil

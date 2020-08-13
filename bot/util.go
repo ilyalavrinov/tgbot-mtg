@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -36,4 +37,8 @@ func loadPicToTmp(url, prefix string) (string, error) {
 	}
 
 	return tmp.Name(), nil
+}
+
+func formatPrice(prefix string, p price) string {
+	return fmt.Sprintf("%s %d₽ at [%s](%s)", prefix, p.Price, p.Seller, p.URL)
 }

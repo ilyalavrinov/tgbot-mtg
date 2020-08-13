@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/admirallarimda/tgbotbase"
+	"github.com/ilyalavrinov/mtgbulkbuy/pkg/mtgbulk"
 	log "github.com/sirupsen/logrus"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
@@ -17,6 +18,7 @@ type edhrecCmdrDailyUpdate struct {
 	url, picUrl string
 	rankInfo    string
 	salt        float32
+	minPrice    price
 }
 
 type edhrecCmdrDailyHandler struct {
@@ -80,6 +82,9 @@ func (h *edhrecCmdrDailyHandler) Run() {
 				saltScore = escapeMarkdown(saltScore)
 				data.rankInfo = escapeMarkdown(data.rankInfo)
 				text := fmt.Sprintf("Commander of the day\n[%s](%s)\n%s\n%s", data.cardname, data.url, data.rankInfo, saltScore)
+				if data.minPrice.Price != 0 {
+					text = fmt.Sprintf("%s\n%s", text, formatPrice("min", data.minPrice))
+				}
 				for _, chatID := range chatsToNotify {
 					msg := tgbotapi.NewPhotoUpload(int64(chatID), picFName)
 					msg.Caption = text
@@ -170,6 +175,20 @@ func (job *edhrecCmdrDailyJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) 
 		"picUrl":    curCmdr.picUrl,
 		"rankInfo":  curCmdr.rankInfo,
 		"saltScore": curCmdr.salt}).Debug("scrapped edhrec cmdr")
+
+	{
+		req := mtgbulk.NewNamesRequest()
+		req.Cards[curCmdr.cardname] = 1
+		resp, err := mtgbulk.ProcessByNames(req)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("Unable to get prices")
+			return
+		}
+		minPriceRes := resp.MinPricesRule[curCmdr.cardname][0]
+		curCmdr.minPrice.Price = int(minPriceRes.Price)
+		curCmdr.minPrice.Seller = minPriceRes.Trader
+		curCmdr.minPrice.URL = minPriceRes.URL
+	}
 
 	job.updates <- curCmdr
 }
