@@ -58,6 +58,8 @@ github.com/ilyalavrinov/mtgbulkbuy v0.0.0-20200605214228-614bc0d8322d h1:6E1y7ML
 github.com/ilyalavrinov/mtgbulkbuy v0.0.0-20200605214228-614bc0d8322d/go.mod h1:fV24Fr8GPiTPM6S8DD5nJGpOL/kCi9MrcjJpmUaJLrg=
 github.com/ilyalavrinov/mtgbulkbuy v0.0.3 h1:GW7MU5kU3ZqZa/tQFVsj2q3URpHILscCBDY4LBeyOtw=
 github.com/ilyalavrinov/mtgbulkbuy v0.0.3/go.mod h1:aG3lrVU3IrekCyENKIdqm9cHDUZqUiXrTKFor+4smWI=
+github.com/ilyalavrinov/mtgbulkbuy v0.0.4 h1:8Iea/htPgypAL7txWpADVLVNR+6KuJZjq3i+6/3bjQI=
+github.com/ilyalavrinov/mtgbulkbuy v0.0.4/go.mod h1:aG3lrVU3IrekCyENKIdqm9cHDUZqUiXrTKFor+4smWI=
 github.com/jedib0t/go-pretty v4.3.0+incompatible h1:CGs8AVhEKg/n9YbUenWmNStRW2PHJzaeDodcfvRAbIo=
 github.com/jedib0t/go-pretty v4.3.0+incompatible/go.mod h1:XemHduiw8R651AF9Pt4FwCTKeG3oo7hrHJAoznj9nag=
 github.com/kennygrant/sanitize v1.2.4 h1:gN25/otpP5vAsO2djbMhF/LQX6R7+O1TB4yv8NzpJ3o=
