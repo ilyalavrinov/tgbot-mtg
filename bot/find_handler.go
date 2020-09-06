@@ -276,7 +276,7 @@ func getPrices(c Card) (cardPrices, error) {
 	if err != nil {
 		log.WithFields(log.Fields{"cardName": c.LocalName, "err": err}).Error("cannot get min card prices")
 	} else {
-		cres := res.MinPricesRule[c.LocalName][0]
+		cres := res.MinPricesNoDelivery[c.LocalName][0]
 		prices.Price.Price = int(cres.Price)
 		prices.Price.Seller = cres.Trader
 		prices.Price.URL = cres.URL

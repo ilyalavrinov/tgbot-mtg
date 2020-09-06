@@ -184,7 +184,7 @@ func (job *edhrecCmdrDailyJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) 
 			log.WithFields(log.Fields{"err": err}).Error("Unable to get prices")
 			return
 		}
-		minPriceRes := resp.MinPricesRule[curCmdr.cardname][0]
+		minPriceRes := resp.MinPricesNoDelivery[curCmdr.cardname][0]
 		curCmdr.minPrice.Price = int(minPriceRes.Price)
 		curCmdr.minPrice.Seller = minPriceRes.Trader
 		curCmdr.minPrice.URL = minPriceRes.URL
